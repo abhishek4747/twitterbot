@@ -39,7 +39,7 @@ Generate Notifications for me to check. [Automatic]
 
 ''' Commit
 
-1. Read globals from file: credentials.txt as array of users
+1. [Done] Read globals from file: credentials.txt as array of users
 2. Create the white list
 3. Autofollow back
 4. Create ToFollow.txt
@@ -72,35 +72,32 @@ from twitter import Twitter, OAuth, TwitterHTTPError
 
 ########################## GLOBAL CONSTANTS ###################################
 
-BOT = True
-
-if BOT:
-	OAUTH_TOKEN     = "2267641183-MXOegYKXPJOB429UzyeYnDMXMwtff6KjWkj8BB3"
-	OAUTH_SECRET    = "ztkd3VzDftt2mpKONCd7cNOGgeYLB5XFwh6knj8r9cDIJ"
-	CONSUMER_KEY    = "rWGVHoCIca5sLh9aRN2ZA"
-	CONSUMER_SECRET = "ygX2aJVZHCY00vOnQSZ9HkA1hUczSNf80sCQr4Z0DWU"
-
-	TWITTER_HANDLE  = "ak47_thelegend"
-	TWITTER_PASSWORD= "twitteriscool"
-
-else:
-	OAUTH_TOKEN     = "970751431-IX2SzkAQsAzsXV0Orh7GAfhtu01mlMEUIfAfkQRv"
-	OAUTH_SECRET    = "K2412DLIaX4rUulQgt4i7zQzTeKaPYGKqlv2gRadMAFhx"
-	CONSUMER_KEY    = "NveQ1ByeXWDSgKfqJrCng"
-	CONSUMER_SECRET = "7E8XiYpgKrdyy9j2GGgvvPoYNhFckPndNlY4Lb4"
-
-	TWITTER_HANDLE  = "abhishek4747"
-	TWITTER_PASSWORD= "twitteriscool"
-
 CREDENTIALS_FILE = "credentials.txt"
+''' credentials.txt : looks like this; can have multiple users; 
+OAUTH_TOKEN     
+OAUTH_SECRET    
+CONSUMER_KEY    
+CONSUMER_SECRET 
+TWITTER_HANDLE  
+TWITTER_PASSWORD
+
+OAUTH_TOKEN     
+OAUTH_SECRET    
+CONSUMER_KEY    
+CONSUMER_SECRET 
+TWITTER_HANDLE  
+TWITTER_PASSWORD
+'''
+
+WHITELIST_FILE = "whitelist.txt"
 
 # t = Api(username=TWITTER_HANDLE,password=TWITTER_PASSWORD)
 # api = t
 
 
 ################################ CLASSES ######################################
-class credential(object):
-	"""docstring for credential"""
+class Credential:
+	"""docstring for Credential"""
 	def __init__(self, OAUTH_TOKEN, OAUTH_SECRET, CONSUMER_KEY, CONSUMER_SECRET, TWITTER_HANDLE, TWITTER_PASSWORD):
 		self.OAUTH_TOKEN     = OAUTH_TOKEN     
 		self.OAUTH_SECRET    = OAUTH_SECRET    
@@ -113,21 +110,103 @@ class credential(object):
 	def __repr__(self):
 		return "\n[%s, %s, %s, %s, %s, %s]"%(self.OAUTH_TOKEN, self.OAUTH_SECRET, self.CONSUMER_KEY, self.CONSUMER_SECRET, self.TWITTER_HANDLE, self.TWITTER_PASSWORD)
 
+class Bot:
+	"""docstring for Bot"""
+	def __init__(self, user_cred):
+		self.user_cred = user_cred
+		self.api = None
+		self.t = self.api
+		self.whitelist = None
+
+	def login(self):
+		try:
+			self.api = Twitter(auth=OAuth(self.user_cred.OAUTH_TOKEN, self.user_cred.OAUTH_SECRET, self.user_cred.CONSUMER_KEY, self.user_cred.CONSUMER_SECRET))
+			self.t = self.api
+			return self.api
+		except Exception as e:
+			print (e)
+			return None
+
+	def getFollowers(self,handle):
+		return [(user['id_str'], cleanStr(user['name']), user['screen_name']) for user in self.api.friends.list(screen_name=handle)["users"]]
+
+	def updateWhitelist(self):
+		# self.whitelist = [line for line in readFile(WHITELIST_FILE) if line!=""] # This is manual, too easy
+		self.whitelist = self.getFollowers(self.user_cred.TWITTER_HANDLE)
+		f = open(WHITELIST_FILE,"w")
+		for user in self.whitelist:
+			f.write("%s\t%s\t%s\n"%(user[0],user[1],user[2]))
+		f.close()
+		print("Whitelist.txt updated.")
+		return self.whitelist
+
+	def followRandom(self):
+		pass
+
+	def unfollowPeople(self):
+		pass
+
+	def updateUnfollowed(self):
+		pass
+
+	def autoFollowBack(self):
+		pass
+
+	def updateToFollow(self):
+		pass
+
+	def tweetScheduled(self):
+		pass
+
+	def tweetCurrent(self):
+		pass
+
+	def retweetAbhishek4747(self):
+		pass
+
+	def refresh(self):
+		""" Execution Refresh():
+			Update Whitelist.txt
+			Follow one random person from ToFollow.txt but not in Unfollowed.txt
+			Unfollow people if they don't follow back even after 1 week.
+			Unfollow unfollowers if they are not in Whitelist.txt.
+			Update and clear entries from Unfollowed.txt which are 1 month old.
+			AutoFollowBack new Followers
+			Read TL and Update ToFollow.txt not in Unfollowed.txt
+			Tweet()
+			TweetCurrent()
+			RetweetAbhishek4747()
+			Sleep(90 secs)
+
+		"""
+		self.updateWhitelist()
+		self.followRandom()
+		self.unfollowPeople()
+		self.updateUnfollowed()
+		self.autoFollowBack()
+		self.updateToFollow()
+		self.tweetScheduled()
+		self.tweetCurrent()
+		self.retweetAbhishek4747()
+		pass
+
+	def stats(self):
+		pass
+
+
 ############################# FUNCTIONS #######################################
-# TODO: get credentials from file 
+def cleanStr(string):
+	return str(string.encode('ascii', 'ignore')) #ignore, replace, xmlcharrefreplace
+
+def readFile(filename):
+	return [s for s in map(lambda x:x.strip(),open(filename).readlines())]
+
 def get_credentials(filename):
-	lines = [s for s in map(lambda x:x.strip(),open(filename).readlines())]
+	lines = readFile(filename)
 	users = []
 	for i in range(int((len(lines)+1)/7)):
-		users.append(credential(lines[i*7+0],lines[i*7+1],lines[i*7+2],lines[i*7+3],lines[i*7+4],lines[i*7+5]))
+		users.append(Credential(lines[i*7+0],lines[i*7+1],lines[i*7+2],lines[i*7+3],lines[i*7+4],lines[i*7+5]))
 	return users
-
-# TODO: login using credentials
-# def login():
-# 	try:
-# 		return Twitter(auth=OAuth(OAUTH_TOKEN, OAUTH_SECRET,CONSUMER_KEY, CONSUMER_SECRET))
-# 	except Exception as e:
-# 		return None
 
 # TODO: 
 # def auto_follow(q, count=100, result_type="recent"):
@@ -206,13 +285,16 @@ def get_credentials(filename):
 # getFollowersOf(TWITTER_HANDLE,1)
 
 if __name__ == "__main__":
-	users_list = get_credentials("credentials.txt")
-	print(users_list)
-	pass
-	# t = login()
-	# if not t:
-	# 	sys.exit(0)
-	# else:
-	# 	print("%s bot logged in successfully" % TWITTER_HANDLE)
+	users_list = get_credentials(CREDENTIALS_FILE)
+	# print(users_list)
 
-
+	b = Bot(users_list[1])
+	login_count = 0
+	while b.login():
+		print("Login count: %d" % login_count)
+		login_count += 1
+		while True:
+			b.refresh()
+			print("Refreshing in 90 secs..")
+			time.sleep(90)
+	print("Couldn't Login!! Aborting")
