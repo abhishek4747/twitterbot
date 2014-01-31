@@ -201,7 +201,7 @@ class Bot:
 		followers = set(list(map(lambda x: x[0],self.getFollowers())))
 		following = set(list(map(lambda x: x[0],self.getFollowing())))
 		self.toUnfollow = list(following - followers)
-		b.cacheIt(TOUNFOLLOW_FILE, self.toUnfollow, "toUnfollow")
+		self.cacheIt(TOUNFOLLOW_FILE, self.toUnfollow, "toUnfollow")
 
 	def cacheFollowers(self):
 		f = open(FOLLOWER_FILE,"w")
