@@ -1,4 +1,5 @@
-whitelist.txt
 test
-credentials.txt
 *.pyc
+*.swp
+*.txt
+*.tsv
