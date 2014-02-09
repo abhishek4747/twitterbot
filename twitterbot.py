@@ -4,18 +4,20 @@
 # Bot : Twitter Bot Class
 ###############################################################################
 
-''' See help.py for more detailed documentation '''
+''' See help.py for more detailed documentation (Not Completed) '''
 
 ########################### INCLUDED LIBS #####################################
 
 import time, sys
 from datetime import datetime, timedelta
 from twitter import Twitter, OAuth, TwitterHTTPError
+#from help import help
 # import os # to be used later to save pids of all the running bots
 
 ########################## GLOBAL CONSTANTS ###################################
 
-CREDENTIALS_FILE    = "credentials.txt" # soon to replaced by tsv # change Credential constructor to list
+CREDENTIALS_FILE    = "credentials.txt" 
+# soon to replaced by tsv # change Credential constructor to list
 
 FOLLOWER_FILE       = "myFollowers.tsv"
 FOLLOWEE_FILE       = "myFollowees.tsv"
@@ -24,27 +26,31 @@ TOUNFOLLOW_FILE     = "toUnfollow.tsv"
 TOFOLLOW_FILE       = "toFollow.tsv"
 WHITELIST_FILE      = "whitelist.tsv"
 BLOCKLIST_FILE      = "blocklist.tsv"
+FOLLOWEDDB_FILE     = "followedDB.tsv"
 
 FOLLOWER_BANK_FILE  = "followerBank.tsv"
 
 ################################ CLASSES ######################################
 class Credential:
     """docstring for Credential"""
-    def __init__(self, OAUTH_TOKEN, OAUTH_SECRET, CONSUMER_KEY, CONSUMER_SECRET, TWITTER_HANDLE, TWITTER_PASSWORD):
+    def __init__(self, OAUTH_TOKEN, OAUTH_SECRET, CONSUMER_KEY, 
+                CONSUMER_SECRET, TWITTER_HANDLE, TWITTER_PASSWORD=None, BOT_NAME=None):
         self.OAUTH_TOKEN     = OAUTH_TOKEN     
         self.OAUTH_SECRET    = OAUTH_SECRET    
         self.CONSUMER_KEY    = CONSUMER_KEY    
         self.CONSUMER_SECRET = CONSUMER_SECRET 
         self.TWITTER_HANDLE  = TWITTER_HANDLE  
         self.TWITTER_PASSWORD= TWITTER_PASSWORD
-        
+        self.BOT_NAME        = BOT_NAME
         
     def __repr__(self):
-        return "\nCredential([%s, %s, %s, %s, %s, %s])"%(self.OAUTH_TOKEN, self.OAUTH_SECRET, self.CONSUMER_KEY, self.CONSUMER_SECRET, self.TWITTER_HANDLE, self.TWITTER_PASSWORD)
+        return "\nCredential([%s, %s, %s, %s, %s, %s])"%(self.OAUTH_TOKEN, 
+            self.OAUTH_SECRET, self.CONSUMER_KEY, self.CONSUMER_SECRET, 
+            self.TWITTER_HANDLE, self.TWITTER_PASSWORD)
 
 class Bot:
     """docstring for Bot"""
-    def __init__(self, user_cred):
+    def __init__(self, user_cred,login=None):
         self.user_cred = user_cred
         self.api = None
         self.t = self.api
@@ -55,62 +61,66 @@ class Bot:
         self.followersCached = True
         self.followeesCached = True
         self.printLog = lambda x: print (str(x))
+        if login:
+            self.login()
 
     def login(self):
         try:
-            self.api = Twitter(auth=OAuth(self.user_cred.OAUTH_TOKEN, self.user_cred.OAUTH_SECRET, self.user_cred.CONSUMER_KEY, self.user_cred.CONSUMER_SECRET))
+            self.api = Twitter(auth=OAuth(self.user_cred.OAUTH_TOKEN, 
+                self.user_cred.OAUTH_SECRET, self.user_cred.CONSUMER_KEY, 
+                self.user_cred.CONSUMER_SECRET))
             self.t = self.api
             return self.api
         except Exception as e:
             self.printLog (e)
             return None
 
-    def getFollowers(self,handle=None):
-        if self.followersCached and self.followers!=None:
-            return self.followers
-        else:
-            if handle==None:
-                handle = self.user_cred.TWITTER_HANDLE
-            self.followers = []
-            next = None
-            while True:
-                if not next:
-                    followers_list = self.api.followers.list(screen_name=handle)
-                else:
-                    followers_list = self.api.followers.list(screen_name=handle, cursor=next)
-                new_followers = [(user['id_str'], user['screen_name'], cleanStr(user['name'])) for user in followers_list["users"]]
-                self.followers += new_followers
-                self.printLog ("fetched followers count: %d" % len(new_followers))
-                if followers_list['next_cursor']==0:
-                    break
-                next = followers_list['next_cursor']
-                self.cacheFollowers()
-                time.sleep(60)
-            return self.followers
+    def getFollowers(self,handle=None,cacheFile=None):
+        if handle==None:
+            handle = self.user_cred.TWITTER_HANDLE
+        if cacheFile==None:
+            cacheFile = FOLLOWER_FILE
+        
+        self.followers = []
+        next = None
+        while True:
+            if not next:
+                followers_list = self.api.followers.list(screen_name=handle)
+            else:
+                followers_list = self.api.followers.list(screen_name=handle, 
+                                                        cursor=next)
+            new_followers = [(user['id_str'], user['screen_name'], 
+                    cleanStr(user['name'])) for user in followers_list["users"]]
+            self.followers += new_followers
+            self.printLog ("fetched followers count: %d" % len(new_followers))
+            next = followers_list['next_cursor']
+            self.cacheIt(FOLLOWER_FILE,self.followers,"%s\'s followers" % handle)
+            if followers_list['next_cursor']==0:
+                break
+            time.sleep(60)
+        return self.followers
 
     def getFollowing(self,handle=None):
-        if self.followeesCached and self.followees!=None:
-            # print(self.followees)
-            return self.followees
-        else:
-            if handle==None:
-                handle = self.user_cred.TWITTER_HANDLE
-            self.followees = []
-            next = None
-            while True:
-                if not next:
-                    following_list = self.api.friends.list(screen_name=handle)
-                else:
-                    following_list = self.api.friends.list(screen_name=handle, cursor=next)
-                new_friends = [(user['id_str'], user['screen_name'], cleanStr(user['name'])) for user in following_list["users"]]
-                self.followees += new_friends
-                self.printLog ("fetched friends count: %d" % len(new_friends))
-                if following_list['next_cursor']==0:
-                    break
-                next = following_list['next_cursor']
-                self.cacheFollowees()
-                time.sleep(60)
-            return self.followees
+        if handle==None:
+            handle = self.user_cred.TWITTER_HANDLE
+        self.followees = []
+        next = None
+        while True:
+            if not next:
+                following_list = self.api.friends.list(screen_name=handle)
+            else:
+                following_list = self.api.friends.list(screen_name=handle, 
+                                                        cursor=next)
+            new_friends = [(user['id_str'], user['screen_name'], 
+                cleanStr(user['name'])) for user in following_list["users"]]
+            self.followees += new_friends
+            self.printLog ("fetched friends count: %d" % len(new_friends))
+            next = following_list['next_cursor']
+            self.cacheFollowees()
+            if following_list['next_cursor']==0:
+                break
+            time.sleep(60)
+        return self.followees
 
 
     def cacheToUnfollow(self):
@@ -119,8 +129,10 @@ class Bot:
         self.toUnfollow = list(following - followers)
         self.cacheIt(TOUNFOLLOW_FILE, self.toUnfollow, "toUnfollow")
 
-    def cacheFollowers(self):
-        f = open(FOLLOWER_FILE,"w")
+    def cacheFollowers(self,FILE_NAME=None,):
+        if FILE_NAME==None:
+            FILE_NAME=FOLLOWER_FILE
+        f = open(FILE_NAME,"w")
         for follower in self.followers:
             f.write("%s\t%s\t%s\n"%(follower[0],follower[1],follower[2]))
         f.close()
@@ -141,7 +153,7 @@ class Bot:
             else:
                 f.write(str(var)+"\n")
         f.close()
-        self.printLog ("%d %s cached" % (len(variable), str(name) ))
+        self.printLog ("%d %s cached in %s" % (len(variable), str(name), str(filename) ))
 
     def readFromCache(self, filename):
         l = readFile(filename)
@@ -173,13 +185,17 @@ class Bot:
             prinLog("Unfollowed handle:%s"%str(handle))
 
     def unfollowAll(self):
-        self.printLog ("Now Unfollowing: %d people"%len(self.toUnfollow))
-        for user in self.toUnfollow:
-            if type(user) is list:
-                self.unfollow(userid=user[0])
-            else:
-                self.unfollow(userid=user)
-            time.sleep(60)
+        self.cacheToUnfollow()
+        if len(self.toUnfollow)>0:
+            self.printLog ("Now Unfollowing: %d people"%len(self.toUnfollow))
+            for user in self.toUnfollow:
+                if type(user) is list:
+                    self.unfollow(userid=user[0])
+                else:
+                    self.unfollow(userid=user)
+                time.sleep(60)
+        else:
+            self.printLog("No one to unfollow  :D")
 
     def updateWhitelist(self):
         # self.whitelist = [line for line in readFile(WHITELIST_FILE) if line!=""] # This is manual, too easy
@@ -209,6 +225,14 @@ class Bot:
         # Independent of any bot
         pass
 
+    def saveFollowersToFile(self):
+        self.cacheIt(FOLLOWER_FILE,self.getFollowers(),"followers ")
+        pass
+
+    def saveFolloweesToFile(self):
+        self.cacheIt(FOLLOWEE_FILE,self.getFollwing(),"followings ")
+        pass
+
     
 ############################# FUNCTIONS #######################################
 def logToFile(filename,s):
@@ -224,8 +248,10 @@ def readFile(filename):
 def get_credentials(filename):
     lines = readFile(filename)
     users = []
-    for i in range(int((len(lines)+1)/7)):
-        users.append(Credential(lines[i*7+0],lines[i*7+1],lines[i*7+2],lines[i*7+3],lines[i*7+4],lines[i*7+5]))
+    lc = 8 # line count per bot
+    for i in range(int((len(lines)+1)/lc)):
+        users.append(Credential(lines[i*lc+0],lines[i*lc+1],lines[i*lc+2],
+                lines[i*lc+3],lines[i*lc+4],lines[i*lc+5],lines[i*lc+6]))
     return users
 
 def dictify(l,index=0):

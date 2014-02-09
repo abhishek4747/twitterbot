@@ -33,7 +33,7 @@ Follow_comp: [Once in a lifetime]
     RefreshWhitelist
 
 
-Fire_comp:
+FnU:
     Follow one from toFollow
     save in follow_db
     Unfollow one from toUnfollow

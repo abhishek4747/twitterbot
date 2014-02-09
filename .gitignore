@@ -3,3 +3,5 @@ test
 *.swp
 *.txt
 *.tsv
+*.log
+test.py
