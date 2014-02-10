@@ -20,11 +20,12 @@ CREDENTIALS_FILE    = "credentials.txt"
 # soon to replaced by tsv # change Credential constructor to list
 
 FOLLOWER_FILE       = "myFollowers.tsv"
-FOLLOWEE_FILE       = "myFollowees.tsv"
+FOLLOWEE_FILE       = "myFollowing.tsv"
 
 TOUNFOLLOW_FILE     = "toUnfollow.tsv"
 TOFOLLOW_FILE       = "toFollow.tsv"
 WHITELIST_FILE      = "whitelist.tsv"
+MANWHITELIST_FILE   = "manwhitelist.tsv"
 BLOCKLIST_FILE      = "blocklist.tsv"
 FOLLOWEDDB_FILE     = "followedDB.tsv"
 
@@ -50,17 +51,18 @@ class Credential:
 
 class Bot:
     """docstring for Bot"""
-    def __init__(self, user_cred,login=None):
+    def __init__(self, user_cred, login=None, printLog=None):
         self.user_cred = user_cred
         self.api = None
-        self.t = self.api
-        self.whitelist = None
-        self.toUnfollow = None
-        self.followers = None
-        self.followees = None
-        self.followersCached = True
-        self.followeesCached = True
-        self.printLog = lambda x: print (str(x))
+        if printLog:
+            self.printLog = printLog
+        else:
+            self.printLog = lambda x: print (str(x))
+        self.whitelist = self.readFromCache(WHITELIST_FILE)
+        self.toUnfollow = self.readFromCache(TOUNFOLLOW_FILE)
+        self.toFollow = self.readFromCache(TOFOLLOW_FILE)
+        self.followers = self.readFromCache(FOLLOWER_FILE)
+        self.following = self.readFromCache(FOLLOWEE_FILE)
         if login:
             self.login()
 
@@ -69,19 +71,18 @@ class Bot:
             self.api = Twitter(auth=OAuth(self.user_cred.OAUTH_TOKEN, 
                 self.user_cred.OAUTH_SECRET, self.user_cred.CONSUMER_KEY, 
                 self.user_cred.CONSUMER_SECRET))
-            self.t = self.api
             return self.api
         except Exception as e:
             self.printLog (e)
             return None
 
-    def getFollowers(self,handle=None,cacheFile=None):
+    def getFollowers(self, handle=None, cacheFile=None):
         if handle==None:
             handle = self.user_cred.TWITTER_HANDLE
-        if cacheFile==None:
+        if cacheFile==None and handle==self.user_cred.TWITTER_HANDLE:
             cacheFile = FOLLOWER_FILE
         
-        self.followers = []
+        followers = []
         next = None
         while True:
             if not next:
@@ -91,19 +92,22 @@ class Bot:
                                                         cursor=next)
             new_followers = [(user['id_str'], user['screen_name'], 
                     cleanStr(user['name'])) for user in followers_list["users"]]
-            self.followers += new_followers
-            self.printLog ("fetched followers count: %d" % len(new_followers))
+            followers += new_followers
+            self.printLog ("%s's fetched followers count: %d" % (handle, len(followers)))
             next = followers_list['next_cursor']
-            self.cacheIt(FOLLOWER_FILE,self.followers,"%s\'s followers" % handle)
+            self.cacheIt(cacheFile, followers,"%s\'s followers" % handle)
             if followers_list['next_cursor']==0:
                 break
             time.sleep(60)
-        return self.followers
+        return set(followers)
 
-    def getFollowing(self,handle=None):
+    def getFollowing(self, handle=None, cacheFile=None):
         if handle==None:
             handle = self.user_cred.TWITTER_HANDLE
-        self.followees = []
+        if cacheFile==None and handle==self.user_cred.TWITTER_HANDLE:
+            cacheFile = FOLLOWEE_FILE
+
+        following = []
         next = None
         while True:
             if not next:
@@ -113,42 +117,21 @@ class Bot:
                                                         cursor=next)
             new_friends = [(user['id_str'], user['screen_name'], 
                 cleanStr(user['name'])) for user in following_list["users"]]
-            self.followees += new_friends
-            self.printLog ("fetched friends count: %d" % len(new_friends))
+            following += new_friends
+            self.printLog ("%s's fetched following count: %d" % (handle, len(following)))
             next = following_list['next_cursor']
-            self.cacheFollowees()
+            self.cacheIt(cacheFile, following, "%s\'s following" % handle)
             if following_list['next_cursor']==0:
                 break
             time.sleep(60)
-        return self.followees
-
-
-    def cacheToUnfollow(self):
-        followers = set(list(map(lambda x: x[0],self.getFollowers())))
-        following = set(list(map(lambda x: x[0],self.getFollowing())))
-        self.toUnfollow = list(following - followers)
-        self.cacheIt(TOUNFOLLOW_FILE, self.toUnfollow, "toUnfollow")
-
-    def cacheFollowers(self,FILE_NAME=None,):
-        if FILE_NAME==None:
-            FILE_NAME=FOLLOWER_FILE
-        f = open(FILE_NAME,"w")
-        for follower in self.followers:
-            f.write("%s\t%s\t%s\n"%(follower[0],follower[1],follower[2]))
-        f.close()
-        self.printLog ("%d followers cached" % len(self.followers))
-
-    def cacheFollowees(self):
-        f = open(FOLLOWEE_FILE,"w")
-        for followee in self.followees:
-            f.write("%s\t%s\t%s\n"%(followee[0],followee[1],followee[2]))
-        f.close()
-        self.printLog ("%d followees cached" % len(self.followees))
+        return set(following)
 
     def cacheIt(self, filename, variable, name):
-        f = open(filename,"w")
+        if not filename:
+            return
+        f = open("cache/"+str(filename),"w")
         for var in variable:
-            if type(var) is list:
+            if type(var) is list or type(var) is tuple:
                 f.write('\t'.join(var)+"\n")
             else:
                 f.write(str(var)+"\n")
@@ -156,57 +139,93 @@ class Bot:
         self.printLog ("%d %s cached in %s" % (len(variable), str(name), str(filename) ))
 
     def readFromCache(self, filename):
-        l = readFile(filename)
-        c = []
-        for line in l:
-            c.append(line.split('\t'))
-        self.printLog ("%d read from %s cached" % (len(l), str(filename) ))
+        c = set()
+        try:
+            l = readFile("cache/"+filename)
+            for line in l:
+                c.add(tuple(line.split('\t')))
+            self.printLog ("%d tuples read from %s cached" % (len(l), str(filename) ))
+        except Exception as e:
+            self.printLog ("Exception readFromCache(%s): %s" % (filename, str(e)))
         return c
 
-
-    def follow(self,handle=None, userid=None):
+    def follow(self, user=None, handle=None, userid=None, force=False):
+        if user:
+            self.api.friendships.destroy(user_id=user[0])
+            self.printLog ("Followed id: %s \thandle: %s \tName: %s" % (str(user[0]), str(user[1]), str(user[2])))
+            return
         if handle==None and userid==None:
             return
-        if userid!=None:
-            self.api.friendships.create(user_id=userid)
-            self.printLog ("followed userid:%s"%str(userid))
-        else:
+        if handle!=None:
             self.api.friendships.create(screen_name=handle)
-            self.printLog ("followed handle:%s"%str(handle))
+            self.printLog ("followed handle: %s"%str(handle))
+        else:
+            self.api.friendships.create(user_id=userid)
+            self.printLog ("followed userid: %s"%str(userid))
 
-    def unfollow(self,handle=None, userid=None):
+    def cacheToUnfollow(self):
+        self.following = self.readFromCache(FOLLOWEE_FILE)
+        self.followers = self.readFromCache(FOLLOWER_FILE)
+        self.whitelist = self.readFromCache(WHITELIST_FILE)
+        self.toUnfollow = self.following - self.followers
+        self.toUnfollow = self.toUnfollow - self.whitelist
+        self.cacheIt(TOUNFOLLOW_FILE, self.toUnfollow, "toUnfollow")
+
+    def unfollow(self, user=None, handle=None, userid=None, force=False):
+        self.whitelist = self.readFromCache(WHITELIST_FILE)
+        if user:
+            if user in self.whitelist:
+                self.printLog ("############################")
+                self.printLog ("Whitelisted!! userid: %s \thandle: %s \tName: %s" % (str(user[0]), str(user[1]), str(user[2])))
+                if force:
+                    self.printLog ("Unfollowing forcefully!!")
+                else:
+                    self.printLog ("Can't be unfollowed!!")
+            else:
+                self.api.friendships.destroy(user_id=user[0])
+                self.printLog ("Unfollowed id: %s \thandle: %s \tName: %s" % (str(user[0]), str(user[1]), str(user[2])))
+            return
+
         if handle==None and userid==None:
             return
-        if userid!=None:
+        if handle!=None:
+            self.api.friendships.destroy(screen_name=handle)
+            self.printLog ("Unfollowed handle:%s"%str(handle))
+        else:
             self.api.friendships.destroy(user_id=userid)
             self.printLog ("Unfollowed userid:%s"%str(userid))
-        else:
-            self.api.friendships.destroy(screen_name=handle)
-            prinLog("Unfollowed handle:%s"%str(handle))
 
     def unfollowAll(self):
         self.cacheToUnfollow()
         if len(self.toUnfollow)>0:
             self.printLog ("Now Unfollowing: %d people"%len(self.toUnfollow))
-            for user in self.toUnfollow:
-                if type(user) is list:
-                    self.unfollow(userid=user[0])
+            for i,user in enumerate(self.toUnfollow):
+                if type(user) is list or type(user) is tuple:
+                    self.unfollow(user=user)
+                    self.following.remove(user)
+                    self.cacheIt(cacheFile, self.following, "%s\'s following" % handle)
                 else:
                     self.unfollow(userid=user)
-                time.sleep(60)
+                self.printLog("%d/%d Unfollowed" % (i+1, len(self.toUnfollow)))
+                if i+1!=len(self.toUnfollow): time.sleep(60)
         else:
             self.printLog("No one to unfollow  :D")
 
     def updateWhitelist(self):
         # self.whitelist = [line for line in readFile(WHITELIST_FILE) if line!=""] # This is manual, too easy
-        self.whitelist = self.getFollowers(self.user_cred.TWITTER_HANDLE)
-        f = open(WHITELIST_FILE,"w")
-        for user in self.whitelist:
-            f.write("%s\t%s\t%s\n"%(user[0],user[1],user[2]))
-        f.close()
-        self.printLog (len(self.whitelist))
-        self.printLog ("whitelist.tsv updated.")
+        h = "abhishek4747"
+        self.whitelist = set()
+        [self.whitelist.add(follower) for follower in self.getFollowers(handle=h, cacheFile=None)]
+        [self.whitelist.add(follower) for follower in self.getFollowing(handle=h, cacheFile=None)]
+        self.cacheIt(WHITELIST_FILE, self.whitelist, "whitelist: followers and following of %s" % h)
         return self.whitelist
+
+    def w2tofollow(self):
+        self.whitelist = self.readFromCache(WHITELIST_FILE)
+        self.toFollow = self.readFromCache(TOFOLLOW_FILE)
+        self.following = self.readFromCache(FOLLOWEE_FILE)
+        self.toFollow = self.toFollow.union(self.whitelist) - self.following
+        self.cacheIt(TOFOLLOW_FILE, self.toFollow, "to follow")
 
     def updateUnfollowed(self):
         pass
@@ -225,19 +244,10 @@ class Bot:
         # Independent of any bot
         pass
 
-    def saveFollowersToFile(self):
-        self.cacheIt(FOLLOWER_FILE,self.getFollowers(),"followers ")
-        pass
-
-    def saveFolloweesToFile(self):
-        self.cacheIt(FOLLOWEE_FILE,self.getFollwing(),"followings ")
-        pass
-
     
 ############################# FUNCTIONS #######################################
 def logToFile(filename,s):
     open(filename,'a',encoding='utf-8').write(str(s)+"\n")
-
 
 def cleanStr(string):
     return str(string.encode('ascii', 'ignore')) #ignore, replace, xmlcharrefreplace

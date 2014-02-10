@@ -4,12 +4,11 @@ from twitterbot import *
 if __name__=="__main__":
     
     user_list = get_credentials(CREDENTIALS_FILE)
-    
     b = Bot(user_list[0])
-    b.printLog = lambda x: logToFile("FnUbotLogs.txt", x)
+    b.printLog = lambda x: [print(x),logToFile(__file__.split('.')[0]+".log", x)]
 
-    b.printLog ("\n\n\n\n#################################################################")  
-    b.printLog ("Bot starting at %s" % str(datetime.now()))
+    b.printLog ("\n\n#################### %s ########################" % __file__)  
+    b.printLog ("Loop Bot Template (%s) starting at %s" % (b.user_cred.BOT_NAME, str(datetime.now())))
     login_count = 0
     login_failed= 0
     while True:

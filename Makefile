@@ -1,23 +1,36 @@
 all:
 	@echo "make help -- for more detais"
-	@echo "\nRules:\n\
-rcb: runConsoleBot\n\
-ufa: unfollowAll\n\
-cfe: cfetb cfeb1 cfefnu cfegw \t\t# check for errror\n\
+	@echo "\nRules:\n \
+rcb: rConsoleBot\n \
+rufa: rUnfollowAll\n \
+cfe: cfetb cfeb1 cfefnu cfegw \t\t# check for errror\n \
 "
 
+##############################################################################
+# help : 
+##############################################################################
 help:
 	@echo "help not implemented yet"
 
-# r : run
+##############################################################################
+# run : different Bots
+##############################################################################
 rfnu: FnUbot.py
 	python3 FnUbot.py &
 
-runConsoleBot: consoleBot.py twitterbot.py
+rConsoleBot: consoleBot.py twitterbot.py
 	@python3 -i consoleBot.py
 
-unfollowAll: unFollowAll.py twitterbot.py
+rUnfollowAll: unFollowAll.py twitterbot.py
 	@python3 unFollowAll.py &
+
+rLoopBot: loopBot.py
+	python3 loopBot.py &
+
+rLinearBot: linearBot.py
+	python3 linearBot.py &
+
+# More bots here
 
 ##############################################################################
 # cfe : check for error
@@ -25,19 +38,28 @@ unfollowAll: unFollowAll.py twitterbot.py
 cfetb: twitterbot.py
 	python3 -m py_compile twitterbot.py
 
-cfeb1: b1.py
-	python3 -m py_compile b1.py
+cfsc: scripts.py
+	python3 -m py_compile scripts.py
 
 cfefnu: FnUbot.py
 	python3 -m py_compile FnUbot.py
 
-cfegw: genWhite.py
-	python3 -m py_compile genWhite.py
-
 cfecb: consoleBot.py
 	python3 -m py_compile consoleBot.py
- 
-cfe: cfetb cfeb1 cfefnu cfegw cfecb
+
+cunfall: unFollowAll.py
+	python3 -m py_compile unFollowAll.py
+
+cfeloopb: loopBot.py
+	python3 -m py_compile loopBot.py
+
+cfelinearb: linearBot.py
+	python3 -m py_compile linearBot.py
+
+cfeinitp: __init__.py
+	python3 -m  py_compile __init__.py
+
+cfe: cfetb cfsc cfefnu cfecb cunfall cfeloopb cfelinearb
 
 ##############################################################################
 # clean:
@@ -57,11 +79,18 @@ killbots:
 ##############################################################################
 # shortcuts of rules
 ##############################################################################
-rcb: runConsoleBot
+rcb: rConsoleBot
 
-ufa: unfollowAll
+rufa: rUnfollowAll
 
 kill: killbots
 
+ca: cleanAll
 
+cl: cleanLogs
 
+cp: cleanPyc
+
+rlpbot: rLoopBot
+
+rlnbot: rLinearBot
