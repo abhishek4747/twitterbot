@@ -3,7 +3,12 @@ all:
 	@echo "\nRules:\n \
 rcb: rConsoleBot\n \
 rufa: rUnfollowAll\n \
+rfnu: FnUbot.py\n \
+lfnu: \t\t\t # logs for rfnu bot\n \
+lufa: \t\t\t # logs for rufa bot\n \
+lcb: \t\t\t # logs for rcb bot\n \
 cfe: cfetb cfeb1 cfefnu cfegw \t\t# check for errror\n \
+sr: showRunning \t\t\t # show Running bot \n \
 "
 
 ##############################################################################
@@ -11,6 +16,9 @@ cfe: cfetb cfeb1 cfefnu cfegw \t\t# check for errror\n \
 ##############################################################################
 help:
 	@echo "help not implemented yet"
+
+showRunning:
+	ps -ef | grep python3 
 
 ##############################################################################
 # run : different Bots
@@ -31,6 +39,27 @@ rLinearBot: linearBot.py
 	python3 linearBot.py &
 
 # More bots here
+
+##############################################################################
+# logs : different Bots
+##############################################################################
+lfnu: logs/FnUbot.log
+	tail -f logs/FnUbot.log &
+
+lConsoleBot: logs/consoleBot.log 
+	tail -f logs/consoleBot.log &
+
+lUnfollowAll: logs/unFollowAll.log 
+	tail -f logs/unFollowAll.log &
+
+lLoopBot: logs/loopBot.log
+	tail -f logs/loopBot.log &
+
+lLinearBot: logs/linearBot.log
+	tail -f logs/linearBot.log &
+
+# More bots here
+
 
 ##############################################################################
 # cfe : check for error
@@ -81,7 +110,11 @@ killbots:
 ##############################################################################
 rcb: rConsoleBot
 
+lcb: lConsoleBot
+
 rufa: rUnfollowAll
+
+lufa: lUnfollowAll
 
 kill: killbots
 
@@ -93,4 +126,10 @@ cp: cleanPyc
 
 rlpbot: rLoopBot
 
+llpbot: lLoopBot
+
 rlnbot: rLinearBot
+
+llnbot: lLinearBot
+
+sr: showRunning

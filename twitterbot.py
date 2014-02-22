@@ -151,7 +151,9 @@ class Bot:
 
     def follow(self, user=None, handle=None, userid=None, force=False):
         if user:
-            self.api.friendships.destroy(user_id=user[0])
+            self.api.friendships.create(user_id=user[0])
+            self.following.add(user)
+            self.cacheIt(FOLLOWEE_FILE, self.following, "%s following" % self.user_cred.TWITTER_HANDLE)
             self.printLog ("Followed id: %s \thandle: %s \tName: %s" % (str(user[0]), str(user[1]), str(user[2])))
             return
         if handle==None and userid==None:
@@ -178,12 +180,15 @@ class Bot:
                 self.printLog ("############################")
                 self.printLog ("Whitelisted!! userid: %s \thandle: %s \tName: %s" % (str(user[0]), str(user[1]), str(user[2])))
                 if force:
+                    self.api.friendships.destroy(user_id=user[0])
                     self.printLog ("Unfollowing forcefully!!")
                 else:
                     self.printLog ("Can't be unfollowed!!")
             else:
                 self.api.friendships.destroy(user_id=user[0])
                 self.printLog ("Unfollowed id: %s \thandle: %s \tName: %s" % (str(user[0]), str(user[1]), str(user[2])))
+            self.following = self.following.remove(user)
+            self.cacheIt(FOLLOWEE_FILE, self.following, "%s following" % self.user_cred.TWITTER_HANDLE)
             return
 
         if handle==None and userid==None:
