@@ -12,10 +12,19 @@ if __name__=="__main__":
 	try:
 		if b.login():
 			# Do something
-			b.printLog("Do something!!")
+			# b.printLog("Do something!!")
+			open(("cache/%s" % WHITELIST_FILE), "w")
+			b.printLog ("Whiltelist cleared")
+			b.getFollowers(handle="abhishek4747",cacheFile="+"+WHITELIST_FILE)
+			b.printLog ("Followers added")
+			b.getFollowing(handle="abhishek4747",cacheFile="+"+WHITELIST_FILE)
+			b.printLog ("Following added")
+			b.whitelist = self.readFromCache(WHITELIST_FILE)	
+			b.cacheIt(WHITELIST_FILE,b.whitelist, "whitelist") 
+			b.printLog ("Whitelist refreshed")
 	except Exception as e:
 		b.printLog("Execption:")
 		b.printLog(str(e))
-		b.printLog("At %s" % (b.user_cred.BOT_NAME, str(datetime.now())))
+		b.printLog("At %s" % ( str(datetime.now())))
 		raise e
 	b.printLog("Linear Bot (%s) Exited at %s" % (b.user_cred.BOT_NAME, str(datetime.now())))

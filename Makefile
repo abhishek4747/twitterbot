@@ -4,11 +4,14 @@ all:
 rcb: rConsoleBot\n \
 rufa: rUnfollowAll\n \
 rfnu: FnUbot.py\n \
+rwl: whitelister.py \n \
+rFF: saveFollowers.py saveFollowings.py \n \
 lfnu: \t\t\t # logs for rfnu bot\n \
 lufa: \t\t\t # logs for rufa bot\n \
 lcb: \t\t\t # logs for rcb bot\n \
 cfe: cfetb cfeb1 cfefnu cfegw \t\t# check for errror\n \
 sr: showRunning \t\t\t # show Running bot \n \
+k: kill \t\t\t #Kills all python process \n \
 "
 
 ##############################################################################
@@ -32,6 +35,13 @@ rConsoleBot: consoleBot.py twitterbot.py
 rUnfollowAll: unFollowAll.py twitterbot.py
 	@python3 unFollowAll.py &
 
+rwl: whitelister.py
+	python3 whitelister.py &
+
+rFF: saveFollowers.py saveFollowings.py
+	python3 saveFollowers.py &
+	python3 saveFollowings.py &
+
 rLoopBot: loopBot.py
 	python3 loopBot.py &
 
@@ -52,6 +62,9 @@ lConsoleBot: logs/consoleBot.log
 lUnfollowAll: logs/unFollowAll.log 
 	tail -f logs/unFollowAll.log &
 
+lwl: logs/whitelister.log
+	tail -f logs/whitelister.log &
+
 lLoopBot: logs/loopBot.log
 	tail -f logs/loopBot.log &
 
@@ -67,9 +80,6 @@ lLinearBot: logs/linearBot.log
 cfetb: twitterbot.py
 	python3 -m py_compile twitterbot.py
 
-cfsc: scripts.py
-	python3 -m py_compile scripts.py
-
 cfefnu: FnUbot.py
 	python3 -m py_compile FnUbot.py
 
@@ -78,6 +88,13 @@ cfecb: consoleBot.py
 
 cunfall: unFollowAll.py
 	python3 -m py_compile unFollowAll.py
+
+cwl: whitelister.py
+	python3 -m py_compile whitelister.py
+
+cFF: saveFollowers.py saveFollowings.py
+	python3 -m py_compile saveFollowers.py
+	python3 -m py_compile saveFollowings.py
 
 cfeloopb: loopBot.py
 	python3 -m py_compile loopBot.py
@@ -88,19 +105,22 @@ cfelinearb: linearBot.py
 cfeinitp: __init__.py
 	python3 -m  py_compile __init__.py
 
-cfe: cfetb cfsc cfefnu cfecb cunfall cfeloopb cfelinearb
+cfe: cfetb cfefnu cfecb cunfall cwl cfeloopb cfelinearb cFF
 
 ##############################################################################
 # clean:
 ##############################################################################
 cleanLogs:
-	rm logs/*.log
-	rm *.log
+	rm -f  logs/*.log
+	rm -f *.log
+
+cleanCache:
+	rm -f cache/*.tsv
 
 cleanPyc:
-	rm *.pyc
+	rm -f *.pyc
 
-cleanAll: cleanLogs cleanPyc
+cleanAll: cleanLogs cleanPyc cleanCache
 
 killbots:
 	pkill python3
@@ -118,6 +138,8 @@ lufa: lUnfollowAll
 
 kill: killbots
 
+clean: cleanAll
+
 ca: cleanAll
 
 cl: cleanLogs
@@ -133,3 +155,5 @@ rlnbot: rLinearBot
 llnbot: lLinearBot
 
 sr: showRunning
+
+k: kill

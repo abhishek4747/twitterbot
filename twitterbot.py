@@ -95,7 +95,7 @@ class Bot:
             followers += new_followers
             self.printLog ("%s's fetched followers count: %d" % (handle, len(followers)))
             next = followers_list['next_cursor']
-            self.cacheIt(cacheFile, followers,"%s\'s followers" % handle)
+            self.cacheIt(cacheFile, new_followers if cacheFile[0]=="+" else followers,"%s\'s followers" % handle)
             if followers_list['next_cursor']==0:
                 break
             time.sleep(60)
@@ -120,7 +120,7 @@ class Bot:
             following += new_friends
             self.printLog ("%s's fetched following count: %d" % (handle, len(following)))
             next = following_list['next_cursor']
-            self.cacheIt(cacheFile, following, "%s\'s following" % handle)
+            self.cacheIt(cacheFile, new_friends if cacheFile[0]=="+" else following, "%s\'s following" % handle)
             if following_list['next_cursor']==0:
                 break
             time.sleep(60)
@@ -129,7 +129,10 @@ class Bot:
     def cacheIt(self, filename, variable, name):
         if not filename:
             return
-        f = open("cache/"+str(filename),"w")
+        if str(filename)[0]=="+":
+            f = open("cache/"+str(filename[1:]),"a")
+        else:
+            f = open("cache/"+str(filename),"w")
         for var in variable:
             if type(var) is list or type(var) is tuple:
                 f.write('\t'.join(var)+"\n")

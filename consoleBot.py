@@ -1,5 +1,8 @@
 from twitterbot import *
-from scripts import *
+try:
+	from scripts import *
+except Exception as e:
+	pass
 
 b = None
 def main():
