@@ -88,8 +88,12 @@ class Bot:
             if not next:
                 followers_list = self.api.followers.list(screen_name=handle)
             else:
-                followers_list = self.api.followers.list(screen_name=handle, 
-                                                        cursor=next)
+                try:
+                    followers_list = self.api.followers.list(screen_name=handle, cursor=next)
+                except Exception as e:
+                    self.printLog ("****************************************\nException: %s" % str(e))
+                    time.sleep(65*5)
+                    continue
             new_followers = [(user['id_str'], user['screen_name'], 
                     cleanStr(user['name'])) for user in followers_list["users"]]
             followers += new_followers
@@ -98,7 +102,7 @@ class Bot:
             self.cacheIt(cacheFile, new_followers if cacheFile[0]=="+" else followers,"%s\'s followers" % handle)
             if followers_list['next_cursor']==0:
                 break
-            time.sleep(60)
+            time.sleep(65)
         return set(followers)
 
     def getFollowing(self, handle=None, cacheFile=None):
@@ -113,8 +117,12 @@ class Bot:
             if not next:
                 following_list = self.api.friends.list(screen_name=handle)
             else:
-                following_list = self.api.friends.list(screen_name=handle, 
-                                                        cursor=next)
+                try:
+                    following_list = self.api.friends.list(screen_name=handle, cursor=next)
+                except Exception as e:
+                    self.printLog ("****************************************\nException: %s" % str(e))
+                    time.sleep(65*5)
+                    continue
             new_friends = [(user['id_str'], user['screen_name'], 
                 cleanStr(user['name'])) for user in following_list["users"]]
             following += new_friends
@@ -123,7 +131,7 @@ class Bot:
             self.cacheIt(cacheFile, new_friends if cacheFile[0]=="+" else following, "%s\'s following" % handle)
             if following_list['next_cursor']==0:
                 break
-            time.sleep(60)
+            time.sleep(65)
         return set(following)
 
     def cacheIt(self, filename, variable, name):
@@ -215,7 +223,7 @@ class Bot:
                 else:
                     self.unfollow(userid=user)
                 self.printLog("%d/%d Unfollowed" % (i+1, len(self.toUnfollow)))
-                if i+1!=len(self.toUnfollow): time.sleep(60)
+                if i+1!=len(self.toUnfollow): time.sleep(65)
         else:
             self.printLog("No one to unfollow  :D")
 
