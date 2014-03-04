@@ -190,7 +190,10 @@ class Bot:
             else:
                 self.api.friendships.destroy(user_id=user[0])
                 self.printLog ("Unfollowed id: %s \thandle: %s \tName: %s" % (str(user[0]), str(user[1]), str(user[2])))
-            self.following = self.following.remove(user)
+            try:
+                self.following = self.following.remove(user)
+            except Exception as e:
+                self.printLog ("Error in removing user from self.following: %s" % str(e))
             self.cacheIt(FOLLOWEE_FILE, self.following, "%s following" % self.user_cred.TWITTER_HANDLE)
             return
 
